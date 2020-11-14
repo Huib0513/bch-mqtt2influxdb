@@ -34,6 +34,8 @@ schema = Schema({
         Optional('cafile'): os.path.exists,
         Optional('certfile'): os.path.exists,
         Optional('keyfile'): os.path.exists,
+        Optional('clientid'): And(str, len),
+        Optional('willtopic'): And(str, len)
     },
     Optional('http'): {
         'destination': And(str, len),

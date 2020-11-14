@@ -29,14 +29,19 @@ class Mqtt2InfluxDB:
                                                  config['influxdb'].get('password', 'root'),
                                                  ssl=config['influxdb'].get('ssl', False))
 
-        self._influxdb.create_database(config['influxdb']['database'])
+        dbs = self._influxdb.get_list_database()
+        logging.debug("Available databases: ")
+        logging.debug(dbs)
+        if not (config['influxdb']['database'] in [db['name'] for db in dbs]):
+            logging.debug("Creating database " + config['influxdb']['database'])
+            self._influxdb.create_database(config['influxdb']['database'])
         self._influxdb.switch_database(config['influxdb']['database'])
 
         for point in self._points:
             if 'database' in point:
                 self._influxdb.create_database(point['database'])
 
-        self._mqtt = paho.mqtt.client.Client()
+        self._mqtt = paho.mqtt.client.Client(client_id=config['mqtt'].get('clientid', ""))
 
         if config['mqtt'].get('username', None):
             self._mqtt.username_pw_set(config['mqtt']['username'],
@@ -50,6 +55,8 @@ class Mqtt2InfluxDB:
         self._mqtt.on_connect = self._on_mqtt_connect
         self._mqtt.on_disconnect = self._on_mqtt_disconnect
         self._mqtt.on_message = self._on_mqtt_message
+        if (config['mqtt'].get('willtopic', None)):
+            self._mqtt.will_set(config['mqtt']['willtopic'], '0', 0, True)
 
         logging.info('MQTT broker host: %s, port: %d, use tls: %s',
                      config['mqtt']['host'],
@@ -72,6 +79,8 @@ class Mqtt2InfluxDB:
             logging.error('Connection refused from reason: %s', lut.get(rc, 'unknown code'))
 
         if rc == paho.mqtt.client.CONNACK_ACCEPTED:
+            if (self._config['mqtt'].get('willtopic', None)):
+                client.publish(self._config['mqtt']['willtopic'], "1", 0, True)
             for point in self._points:
                 logging.info('subscribe %s', point['topic'])
                 client.subscribe(point['topic'])
