@@ -25,6 +25,10 @@ def main():
     log_file = None
     if args.output:
         log_file = args.output
+        # Create directory for logfile if it doest not exist
+        if not os.path.exists(os.path.dirname(args.output)):
+            os.makedirs(os.path.dirname(args.output))
+
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO, format=LOG_FORMAT, filename=log_file)
 
